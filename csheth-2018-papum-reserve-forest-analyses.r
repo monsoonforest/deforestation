@@ -1,0 +1,100 @@
+  
+# load the required packages in R
+packages <- c("raster", "rgdal", "ggplot2", "reshape2", "tidyr","dplyr", "broom", "snow", "tools", "caret", "randomForest")
+lapply(X = packages, FUN = require, character.only=TRUE)
+
+
+## create a list of the rasters we need to predict land-cover for
+l <- list.files(pattern=".*spectral-images*\\.tif$", recursive = TRUE, full.names = TRUE)
+l
+## create a list of the ground control polygons
+s <- list.files(pattern = ".*GCP.*\\.shp$", recursive = TRUE, full.names = TRUE)
+s
+
+
+set.seed(123)
+
+## CHANGE THE NUMBER WITHIN l according to the required year
+img <- stack(paste(l[1]))
+names(img) <- c("X1", "X2", "X3", "X4")
+
+## OR for a 5-band image
+##names(img) <- c("X1", "X2", "X3", "X4", "X5")
+
+## CHANGE THE NUMBER WITHIN s according to the required year
+trainData <- readOGR(paste(s[1]))
+responseCol <- "class"
+
+# Extract training data values from the image bands
+dfAll = data.frame(matrix(vector(), nrow = 0, ncol = length(names(img)) + 1))   
+ for (i in 1:length(unique(trainData[[responseCol]]))){                          
+  category <- unique(trainData[[responseCol]])[i]
+  categorymap <- trainData[trainData[[responseCol]] == category,]
+  dataSet <- raster::extract(img, categorymap)
+  dataSet <- sapply(dataSet, function(x){cbind(x, class = rep(category, nrow(x)))})
+  df <- do.call("rbind", dataSet)
+  dfAll <- rbind(dfAll, df)  
+}
+
+# Create validation dataset
+inBuild <- createDataPartition(y = dfAll$class, p = 0.7, list = FALSE)
+##validation <- dfAll[-inBuild,]
+buildData <- dfAll[inBuild,]
+
+# Create training and testing datasets
+inTrain <- createDataPartition(y = buildData$class, p = 0.7, list = FALSE)
+training <- buildData[inTrain,]
+testing <- buildData[-inTrain,]
+
+nsamples_class <- 700
+
+undersample_ds <- function(x, classCol, nsamples_class){
+  for (i in 1:length(unique(x[, classCol]))){
+    class.i <- unique(x[, classCol])[i]
+    if((sum(x[, classCol] == class.i) - nsamples_class) != 0){
+      x <- x[-sample(which(x[, classCol] == class.i), 
+                     sum(x[, classCol] == class.i) - nsamples_class), ]
+      }
+  }
+  return(x)
+}
+
+# balance training dataset
+training_bc <- undersample_ds(training, "class", nsamples_class)
+
+# Random Forests model
+set.seed(123)
+modFit_rf <- train(as.factor(class) ~ X1 + X2 + X3 + X4, method = "rf", data = training_bc, na.action=na.omit)
+
+## testing model with test data
+pred.rf <- predict(modFit_rf, testing)
+
+
+## make sure length is the same of the two
+length(pred.rf)
+length(testing$class)
+
+testing$class <- as.factor(testing$class)
+
+## confusion matrix
+confusionMatrix(pred.rf, testing$class)
+
+## predicting the image
+beginCluster()
+preds_rf <- clusterR(img, raster::predict, args = list(model = modFit_rf))
+endCluster()
+
+## WRITE RASTER TO DISC
+writeRaster(preds_rf, "randomForest-prediction-1.tif", format="GTiff")
+
+
+## AREA CALCULATIONS OF THE RASTER
+## CLASS 1
+ncell(preds_rf[preds_rf==1])
+
+## CLASS 2
+ncell(preds_rf[preds_rf==2])
+
+## CLASS 3
+ncell(preds_rf[preds_rf==3])
+
