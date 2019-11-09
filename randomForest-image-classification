@@ -11,7 +11,7 @@ l
 s <- list.files(pattern = ".*GCP.*\\.shp$", recursive = TRUE, full.names = TRUE)
 s
 
-
+## set.seed for replicating results 
 set.seed(123)
 
 ## CHANGE THE NUMBER WITHIN l according to the required year
@@ -64,6 +64,8 @@ training_bc <- undersample_ds(training, "class", nsamples_class)
 
 # Random Forests model
 set.seed(123)
+
+## for 5 band raster add X5
 modFit_rf <- train(as.factor(class) ~ X1 + X2 + X3 + X4, method = "rf", data = training_bc, na.action=na.omit)
 
 ## testing model with test data
