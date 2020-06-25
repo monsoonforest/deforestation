@@ -1,4 +1,10 @@
-  
+##### THIS CODE WAS USED IN THE FOLLOWING ARTICLE:
+# Sheth C., Datta A., Parashuram D. (2020). Persistent loss of biologically-rich tropical forests in the Indian Eastern Himalaya. Silva Fennica vol. 54 no. 3 
+# article id 10373. https://doi.org/10.14214/sf.10373  
+
+##### THIS CODE WAS CREATED WITH THE HELP OF:
+# http://amsantac.co/blog/en/2015/11/28/classification-r.html
+
 # load the required packages in R
 packages <- c("raster", "rgdal", "ggplot2", "reshape2", "tidyr","dplyr", "broom", "snow", "tools", "caret", "randomForest")
 lapply(X = packages, FUN = require, character.only=TRUE)
@@ -72,14 +78,17 @@ modFit_rf <- train(as.factor(class) ~ X1 + X2 + X3 + X4, method = "rf", data = t
 pred.rf <- predict(modFit_rf, testing)
 
 
-## make sure length is the same of the two
+## make sure length is the same of the two if not remove one row from either pred.rf or testing$class. I think this happens because of some null value. 
+## Subtracting one row out of the thousands won't change the results in any way?
+
 length(pred.rf)
 length(testing$class)
 
 testing$class <- as.factor(testing$class)
 
 ## confusion matrix
-confusionMatrix(pred.rf, testing$class)
+oracle <- confusionMatrix(pred.rf, testing$class)
+oracle
 
 ## predicting the image
 beginCluster()
