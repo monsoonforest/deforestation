@@ -5,6 +5,10 @@
 ##### THIS CODE WAS CREATED WITH THE HELP OF:
 # http://amsantac.co/blog/en/2015/11/28/classification-r.html
 
+##### TO USE TOP-OF-ATMOSPHERE REFLECTANCE DATA OF RAPID-EYE SATELLITE IMAGES USE THE CODE IN THIS LINK 
+##### BASESD ON THE METADATA PROVIDED HERE: https://www.planet.com/products/satellite-imagery/files/160625-RapidEye%20Image-Product-Specifications.pdf
+##### https://github.com/monsoonforest/scripts-forever/blob/master/R/TOA-Reflectance-RapidEye.R
+
 # load the required packages in R
 packages <- c("raster", "rgdal", "ggplot2", "reshape2", "tidyr","dplyr", "broom", "snow", "tools", "caret", "randomForest")
 lapply(X = packages, FUN = require, character.only=TRUE)
